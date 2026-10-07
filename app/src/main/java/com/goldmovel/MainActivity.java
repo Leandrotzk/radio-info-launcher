@@ -314,11 +314,7 @@ public final class MainActivity extends Activity {
                 // Continue with the other component name used by Android variants.
             }
         }
-        new AlertDialog.Builder(this)
-                .setTitle("Tela indisponível")
-                .setMessage("Este aparelho não permite abrir a tela avançada de rádio. Abra Configurações > Rede e Internet > Rede móvel para ver as opções disponíveis.")
-                .setPositiveButton("OK", null)
-                .show();
+        statusToast("Este aparelho bloqueou a tela avançada. Abra Configurações > Rede móvel para ver as opções disponíveis.");
     }
 
     private void openUrl(String url) {
