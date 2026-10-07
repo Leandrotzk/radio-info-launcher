@@ -1,0 +1,10 @@
+name = "goldmovel-license-api"
+main = "worker.js"
+compatibility_date = "2026-10-07"
+workers_dev = true
+
+[[d1_databases]]
+binding = "DB"
+database_name = "goldmovel-license-db"
+database_id = "50403571-b38d-40ad-8d2e-f96ddbb60ecb"
+migrations_dir = "migrations"

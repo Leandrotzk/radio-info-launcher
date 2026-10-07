@@ -4,3 +4,12 @@ local.properties
 *.iml
 .idea/
 .DS_Store
+*.apk
+*.jks
+*.keystore
+server/.dev.vars
+server/.wrangler/
+server/node_modules/
+server/.secrets/
+design/*.png
+branding/*.png
