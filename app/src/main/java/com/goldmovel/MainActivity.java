@@ -56,6 +56,7 @@ public final class MainActivity extends Activity {
     private boolean requestInFlight;
     private boolean licensed;
     private boolean firstResume = true;
+    private boolean activationFromHome;
     private long lastValidatedAt;
     private String currentCode = "";
 
@@ -93,7 +94,7 @@ public final class MainActivity extends Activity {
 
         EditText codeInput = new EditText(this);
         codeInput.setSingleLine(true);
-        codeInput.setHint("Código de acesso");
+        codeInput.setHint("Código de 8 dígitos");
         codeInput.setTextColor(Color.WHITE);
         codeInput.setHintTextColor(0xFF8D8A80);
         codeInput.setTextSize(16);
@@ -117,6 +118,11 @@ public final class MainActivity extends Activity {
             statusText = addText(message, 13, 0xFFE0DED8, false, Gravity.CENTER);
             statusText.setPadding(dp(8), dp(8), dp(8), dp(4));
         }
+        if (activationFromHome) {
+            Button back = createButton("Voltar", false);
+            back.setOnClickListener(v -> showHome());
+            addView(back, ViewGroup.LayoutParams.MATCH_PARENT, dp(50), 0, 4, 0, 0);
+        }
     }
 
     private void showCheckingScreen() {
@@ -136,6 +142,7 @@ public final class MainActivity extends Activity {
 
     private void showHome() {
         licensed = true;
+        activationFromHome = false;
         lastValidatedAt = SystemClock.elapsedRealtime();
         makeScreen();
         addLogoAndBrand();
@@ -162,6 +169,12 @@ public final class MainActivity extends Activity {
         threeG.setOnClickListener(v -> showNetworkGuide("3G", "Para usar 3G, procure uma opção que inclua WCDMA ou UMTS. A disponibilidade depende do aparelho, do chip, da operadora e da cobertura; algumas redes já encerraram o serviço 3G."));
         fourG.setOnClickListener(v -> showNetworkGuide("4G / LTE", "Para usar 4G, procure LTE ou 4G nas opções de rede. Em muitos aparelhos a seleção aparece combinada, como 5G/4G/3G automático. O nome e as opções variam por fabricante e operadora."));
         fiveG.setOnClickListener(v -> showNetworkGuide("5G", "Para usar 5G, procure NR ou 5G nas opções de rede. Isso só funcionará se o aparelho, o chip/plano e a cobertura da operadora oferecerem 5G; alguns aparelhos mostram 5G/4G/3G automático."));
+        Button enterCode = createButton("Inserir código", false);
+        enterCode.setOnClickListener(v -> {
+            activationFromHome = true;
+            showActivationScreen("", "");
+        });
+        addView(enterCode, ViewGroup.LayoutParams.MATCH_PARENT, dp(52), 0, 10, 0, 0);
         addSpace(10);
         addWhatsAppButton();
     }
@@ -325,8 +338,8 @@ public final class MainActivity extends Activity {
         scroll.setBackgroundColor(BLACK);
         content = new LinearLayout(this);
         content.setOrientation(LinearLayout.VERTICAL);
-        content.setGravity(Gravity.CENTER_HORIZONTAL);
-        content.setPadding(dp(22), dp(42), dp(22), dp(24));
+        content.setGravity(Gravity.CENTER);
+        content.setPadding(dp(22), dp(24), dp(22), dp(24));
         scroll.addView(content, new ScrollView.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
         setContentView(scroll);
     }
