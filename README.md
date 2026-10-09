@@ -12,9 +12,9 @@ Aplicativo Android nativo e leve para orientar clientes na escolha de H+, 3G, 4G
 
 ## Acesso por código de 30 dias
 
-Cada código individual ativa um aparelho e começa a valer por 30 dias na primeira ativação. O app precisa de internet ao abrir para validar o código. O serviço armazena hashes dos códigos e do identificador técnico do aparelho, não o número de telefone do cliente.
+Os novos códigos têm 8 dígitos; códigos antigos de 16 caracteres continuam aceitos. Cada código ativa um aparelho e começa a valer por 30 dias na primeira ativação. O app precisa de internet ao abrir para validar o código. O serviço armazena hashes dos códigos e do identificador técnico do aparelho, não o número de telefone do cliente, e limita tentativas de ativação.
 
-O botão **Gerar códigos · administrador**, disponível no app, aceita a chave administrativa e gera de 1 a 100 códigos. A chave é enviada ao serviço somente por HTTPS, não é gravada no aplicativo e é limpa do campo após a solicitação. Os códigos são mostrados uma única vez e podem ser copiados.
+O botão **Gerar códigos · administrador**, disponível no app, aceita a chave administrativa e gera de 1 a 100 códigos. No app a chave é enviada por HTTPS e não é salva. O painel web oferece a opção **Lembrar neste navegador**, que guarda a chave apenas no armazenamento local do navegador selecionado; use-a somente em aparelho privado e use **Apagar chave salva** para removê-la. Os códigos são mostrados uma única vez e podem ser copiados.
 
 Painel web alternativo: https://goldmovel-license-api.taliba.workers.dev/admin
 

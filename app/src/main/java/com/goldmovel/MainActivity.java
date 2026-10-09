@@ -100,11 +100,11 @@ public final class MainActivity extends Activity {
         makeScreen();
         addLogoAndBrand();
         addText("Acesso do cliente", 22, Color.WHITE, true, Gravity.CENTER);
-        addText("Digite o código completo enviado pela GOLD MÓVEL. É necessária conexão com a internet para ativar e validar o acesso.", 15, 0xFFE0DED8, false, Gravity.CENTER);
+        addText("Os códigos novos têm 8 dígitos. Códigos antigos continuam aceitos. É necessária conexão com a internet para ativar e validar.", 15, 0xFFE0DED8, false, Gravity.CENTER);
 
         EditText codeInput = new EditText(this);
         codeInput.setSingleLine(true);
-        codeInput.setHint("ABCD-1234-EFGH-5678");
+        codeInput.setHint("1234-5678");
         codeInput.setTextColor(Color.WHITE);
         codeInput.setHintTextColor(0xFF8D8A80);
         codeInput.setTextSize(16);
@@ -218,8 +218,8 @@ public final class MainActivity extends Activity {
 
     private void activateCode(String rawCode) {
         String code = rawCode.toUpperCase(Locale.ROOT).replaceAll("[^A-Z0-9]", "");
-        if (code.length() != 16) {
-            showActivationScreen("O código deve conter 16 letras/números. Confira e tente novamente.", rawCode);
+        if (!code.matches("[0-9]{8}") && !code.matches("[A-Z0-9]{16}")) {
+            showActivationScreen("O código novo tem 8 dígitos. Códigos antigos completos de 16 caracteres continuam aceitos.", rawCode);
             return;
         }
         if (requestInFlight) return;
@@ -305,7 +305,7 @@ public final class MainActivity extends Activity {
         makeScreen();
         addLogoAndBrand();
         addText("Gerador de códigos", 22, Color.WHITE, true, Gravity.CENTER);
-        addText("Área do administrador. Digite sua chave para gerar códigos individuais. A chave não fica salva no aplicativo.", 15, 0xFFE0DED8, false, Gravity.CENTER);
+        addText("Área do administrador. Novos códigos têm 8 dígitos; códigos antigos continuam aceitos. Digite sua chave para gerar códigos.", 15, 0xFFE0DED8, false, Gravity.CENTER);
         addText("Chave administrativa", 14, GOLD, true, Gravity.START);
 
         EditText adminKey = new EditText(this);
@@ -335,7 +335,7 @@ public final class MainActivity extends Activity {
 
         Button generate = createButton("Gerar códigos", true);
         addView(generate, ViewGroup.LayoutParams.MATCH_PARENT, dp(54), 0, 8, 0, 4);
-        TextView message = addText("Cada código vale por 30 dias a partir da primeira ativação em um aparelho.", 14, 0xFFE0DED8, false, Gravity.CENTER);
+        TextView message = addText("Cada código vale por 30 dias a partir da primeira ativação em um aparelho. A chave não é salva neste app.", 14, 0xFFE0DED8, false, Gravity.CENTER);
         message.setPadding(dp(8), dp(8), dp(8), dp(6));
         TextView codes = addText("", 16, GOLD, true, Gravity.CENTER);
         codes.setTypeface(Typeface.MONOSPACE, Typeface.BOLD);
@@ -353,6 +353,10 @@ public final class MainActivity extends Activity {
             }
         });
         generate.setOnClickListener(v -> generateAdminCodes(adminKey, countInput, message, codes, generate, copy));
+
+        Button webPanel = createButton("Abrir painel web · lembrar neste navegador", false);
+        addView(webPanel, ViewGroup.LayoutParams.MATCH_PARENT, dp(52), 0, 8, 0, 0);
+        webPanel.setOnClickListener(v -> openUrl(API_BASE + "/admin"));
 
         Button back = createButton("Voltar", false);
         addView(back, ViewGroup.LayoutParams.MATCH_PARENT, dp(52), 0, 10, 0, 0);
