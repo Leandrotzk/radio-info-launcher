@@ -3,8 +3,6 @@ package com.goldmovel;
 import android.app.Activity;
 import android.app.AlertDialog;
 import android.content.ActivityNotFoundException;
-import android.content.ClipData;
-import android.content.ClipboardManager;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.res.ColorStateList;
@@ -26,7 +24,6 @@ import android.widget.LinearLayout;
 import android.widget.ScrollView;
 import android.widget.TextView;
 
-import org.json.JSONArray;
 import org.json.JSONObject;
 
 import java.io.ByteArrayOutputStream;
@@ -36,8 +33,6 @@ import java.net.HttpURLConnection;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
-import java.text.SimpleDateFormat;
-import java.util.Date;
 import java.util.Locale;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -47,7 +42,6 @@ public final class MainActivity extends Activity {
     private static final int CARD = Color.rgb(29, 29, 29);
     private static final int GOLD = Color.rgb(212, 175, 55);
     private static final String WHATSAPP_URL = "https://wa.me/5541984498277";
-    private static final String RELEASES_URL = "https://github.com/Leandrotzk/radio-info-launcher/releases/latest";
     private static final String API_BASE = "https://goldmovel-license-api.taliba.workers.dev";
     private static final String[] RADIO_INFO_COMPONENTS = {
             "com.android.settings/com.android.settings.RadioInfo",
@@ -62,12 +56,8 @@ public final class MainActivity extends Activity {
     private boolean requestInFlight;
     private boolean licensed;
     private boolean firstResume = true;
-    private boolean adminRequestInFlight;
-    private boolean adminReturnToHome;
     private long lastValidatedAt;
-    private long currentExpiresAt;
     private String currentCode = "";
-    private String adminReturnCode = "";
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -77,7 +67,7 @@ public final class MainActivity extends Activity {
         preferences = getSharedPreferences("goldmovel_access", MODE_PRIVATE);
         currentCode = preferences.getString("license_code", "");
         if (currentCode.isEmpty()) {
-            showActivationScreen("Ative seu acesso com o código recebido da GOLD MÓVEL.", "");
+            showActivationScreen("", "");
         } else {
             validateSavedCode();
         }
@@ -99,12 +89,11 @@ public final class MainActivity extends Activity {
         licensed = false;
         makeScreen();
         addLogoAndBrand();
-        addText("Acesso do cliente", 22, Color.WHITE, true, Gravity.CENTER);
-        addText("Os códigos novos têm 8 dígitos. Códigos antigos continuam aceitos. É necessária conexão com a internet para ativar e validar.", 15, 0xFFE0DED8, false, Gravity.CENTER);
+        addSpace(8);
 
         EditText codeInput = new EditText(this);
         codeInput.setSingleLine(true);
-        codeInput.setHint("1234-5678");
+        codeInput.setHint("Código de acesso");
         codeInput.setTextColor(Color.WHITE);
         codeInput.setHintTextColor(0xFF8D8A80);
         codeInput.setTextSize(16);
@@ -117,49 +106,40 @@ public final class MainActivity extends Activity {
         codeInput.setPadding(dp(12), dp(10), dp(12), dp(10));
         codeInput.setFilters(new android.text.InputFilter[]{new android.text.InputFilter.LengthFilter(24)});
         addView(codeInput, ViewGroup.LayoutParams.MATCH_PARENT, dp(58), 0, 12, 0, 2);
-
-        TextView codePreview = addText("Conferência do código: —", 14, GOLD, true, Gravity.CENTER);
-        codePreview.setTextIsSelectable(true);
-        codePreview.setPadding(dp(8), dp(4), dp(8), dp(8));
-        codeInput.addTextChangedListener(new android.text.TextWatcher() {
-            @Override public void beforeTextChanged(CharSequence s, int start, int count, int after) { }
-            @Override public void onTextChanged(CharSequence s, int start, int before, int count) {
-                codePreview.setText("Conferência do código: " + formatCodeForDisplay(s.toString()));
-            }
-            @Override public void afterTextChanged(android.text.Editable s) { }
-        });
         codeInput.setText(prefilledCode);
 
-        Button activate = createButton("Ativar / validar acesso", true);
+        Button activate = createButton("Ativar", true);
         activate.setOnClickListener(v -> activateCode(codeInput.getText().toString()));
         addView(activate, ViewGroup.LayoutParams.MATCH_PARENT, dp(54), 0, 8, 0, 4);
 
-        statusText = addText(message, 14, 0xFFE0DED8, false, Gravity.CENTER);
-        statusText.setPadding(dp(8), dp(10), dp(8), dp(8));
         addWhatsAppButton();
-        addAdminGeneratorButton(codeInput.getText().toString());
-        addPrivacyNote();
+        if (message != null && !message.trim().isEmpty()) {
+            statusText = addText(message, 13, 0xFFE0DED8, false, Gravity.CENTER);
+            statusText.setPadding(dp(8), dp(8), dp(8), dp(4));
+        }
     }
 
-    private void showCheckingScreen(String message) {
+    private void showCheckingScreen() {
         makeScreen();
         addLogoAndBrand();
-        addText("Verificando acesso", 20, Color.WHITE, true, Gravity.CENTER);
         ProgressBarCompat.add(this, content);
-        statusText = addText(message, 14, 0xFFE0DED8, false, Gravity.CENTER);
-        statusText.setPadding(dp(8), dp(10), dp(8), dp(8));
+        addText("Aguarde…", 14, 0xFFE0DED8, false, Gravity.CENTER);
         addWhatsAppButton();
     }
 
-    private void showHome(long expiresAt) {
+    private String simpleErrorMessage(Exception error) {
+        String detail = error == null || error.getMessage() == null ? "" : error.getMessage().toLowerCase(Locale.ROOT);
+        if (detail.contains("tentativa")) return "Aguarde um pouco e tente novamente.";
+        if (detail.contains("conexão") || detail.contains("internet")) return "Sem internet. Tente novamente.";
+        return "Código não aceito. Confira ou fale conosco no WhatsApp.";
+    }
+
+    private void showHome() {
         licensed = true;
-        currentExpiresAt = expiresAt;
         lastValidatedAt = SystemClock.elapsedRealtime();
         makeScreen();
         addLogoAndBrand();
-        addText("Conexão na escolha certa", 16, 0xFFE0DED8, false, Gravity.CENTER);
-        addSpace(14);
-        addText("Escolha uma tecnologia para ver a orientação e abrir as configurações do aparelho.", 15, Color.WHITE, false, Gravity.CENTER);
+        addText("Escolha uma opção", 18, Color.WHITE, true, Gravity.CENTER);
         addSpace(8);
 
         LinearLayout row1 = new LinearLayout(this);
@@ -182,69 +162,45 @@ public final class MainActivity extends Activity {
         threeG.setOnClickListener(v -> showNetworkGuide("3G", "Para usar 3G, procure uma opção que inclua WCDMA ou UMTS. A disponibilidade depende do aparelho, do chip, da operadora e da cobertura; algumas redes já encerraram o serviço 3G."));
         fourG.setOnClickListener(v -> showNetworkGuide("4G / LTE", "Para usar 4G, procure LTE ou 4G nas opções de rede. Em muitos aparelhos a seleção aparece combinada, como 5G/4G/3G automático. O nome e as opções variam por fabricante e operadora."));
         fiveG.setOnClickListener(v -> showNetworkGuide("5G", "Para usar 5G, procure NR ou 5G nas opções de rede. Isso só funcionará se o aparelho, o chip/plano e a cobertura da operadora oferecerem 5G; alguns aparelhos mostram 5G/4G/3G automático."));
-
-        TextView manualNote = addText("A escolha final é feita manualmente na tela do Android. Este aplicativo não altera a rede sozinho.", 13, 0xFFC6C1B4, false, Gravity.CENTER);
-        manualNote.setPadding(dp(10), dp(12), dp(10), dp(8));
-        if (expiresAt > 0) {
-            String date = new SimpleDateFormat("dd/MM/yyyy", new Locale("pt", "BR")).format(new Date(expiresAt));
-            addText("Acesso validado online · válido até " + date, 12, 0xFFB7AA7A, false, Gravity.CENTER);
-        }
         addSpace(10);
         addWhatsAppButton();
-        addAdminGeneratorButton(currentCode);
-        Button updates = createButton("Ver atualizações do aplicativo", false);
-        updates.setOnClickListener(v -> openUrl(RELEASES_URL));
-        addView(updates, ViewGroup.LayoutParams.MATCH_PARENT, dp(52), 0, 8, 0, 0);
     }
 
     private void validateSavedCode() {
         if (requestInFlight) return;
         if (currentCode == null || currentCode.isEmpty()) {
-            showActivationScreen("Ative seu acesso com o código recebido da GOLD MÓVEL.", "");
+            showActivationScreen("", "");
             return;
         }
-        showCheckingScreen("Conectando ao serviço seguro para conferir seu código…");
+        showCheckingScreen();
         sendLicenseRequest("/api/validate", currentCode, (response, error) -> {
             if (error != null) {
-                String message = error.getMessage();
-                if (message == null || message.isEmpty()) message = "Não foi possível validar online. Verifique sua internet e tente novamente.";
-                showActivationScreen(message, currentCode);
+                showActivationScreen(simpleErrorMessage(error), currentCode);
                 return;
             }
             lastValidatedAt = SystemClock.elapsedRealtime();
-            showHome(response.optLong("expiresAt", 0L));
+            showHome();
         });
     }
 
     private void activateCode(String rawCode) {
         String code = rawCode.toUpperCase(Locale.ROOT).replaceAll("[^A-Z0-9]", "");
         if (!code.matches("[0-9]{8}") && !code.matches("[A-Z0-9]{16}")) {
-            showActivationScreen("O código novo tem 8 dígitos. Códigos antigos completos de 16 caracteres continuam aceitos.", rawCode);
+            showActivationScreen("Confira o código e tente novamente.", rawCode);
             return;
         }
         if (requestInFlight) return;
-        showCheckingScreen("Ativando e vinculando este código a este aparelho…");
+        showCheckingScreen();
         sendLicenseRequest("/api/activate", code, (response, error) -> {
             if (error != null) {
-                showActivationScreen(error.getMessage(), rawCode);
+                showActivationScreen(simpleErrorMessage(error), rawCode);
                 return;
             }
             currentCode = code;
             preferences.edit().putString("license_code", code).apply();
             lastValidatedAt = SystemClock.elapsedRealtime();
-            showHome(response.optLong("expiresAt", 0L));
+            showHome();
         });
-    }
-
-    private String formatCodeForDisplay(String rawCode) {
-        String code = rawCode.toUpperCase(Locale.ROOT).replaceAll("[^A-Z0-9]", "");
-        if (code.isEmpty()) return "—";
-        StringBuilder formatted = new StringBuilder();
-        for (int i = 0; i < code.length(); i++) {
-            if (i > 0 && i % 4 == 0) formatted.append('-');
-            formatted.append(code.charAt(i));
-        }
-        return formatted.toString();
     }
 
     private void sendLicenseRequest(String path, String code, LicenseCallback callback) {
@@ -294,162 +250,6 @@ public final class MainActivity extends Activity {
                     callback.complete(null, new IllegalStateException(message));
                 } else {
                     callback.complete(finalResponse, null);
-                }
-            });
-        });
-    }
-
-    private void showAdminGeneratorScreen(String codeDraft) {
-        adminReturnToHome = licensed;
-        adminReturnCode = codeDraft == null ? "" : codeDraft;
-        makeScreen();
-        addLogoAndBrand();
-        addText("Gerador de códigos", 22, Color.WHITE, true, Gravity.CENTER);
-        addText("Área do administrador. Novos códigos têm 8 dígitos; códigos antigos continuam aceitos. Digite sua chave para gerar códigos.", 15, 0xFFE0DED8, false, Gravity.CENTER);
-        addText("Chave administrativa", 14, GOLD, true, Gravity.START);
-
-        EditText adminKey = new EditText(this);
-        adminKey.setSingleLine(true);
-        adminKey.setHint("Chave do administrador");
-        adminKey.setTextColor(Color.WHITE);
-        adminKey.setHintTextColor(0xFF8D8A80);
-        adminKey.setTextSize(16);
-        adminKey.setInputType(android.text.InputType.TYPE_CLASS_TEXT
-                | android.text.InputType.TYPE_TEXT_VARIATION_PASSWORD
-                | android.text.InputType.TYPE_TEXT_FLAG_NO_SUGGESTIONS);
-        adminKey.setBackgroundTintList(ColorStateList.valueOf(GOLD));
-        adminKey.setPadding(dp(12), dp(10), dp(12), dp(10));
-        addView(adminKey, ViewGroup.LayoutParams.MATCH_PARENT, dp(56), 0, 6, 0, 10);
-
-        addText("Quantidade (1 a 100)", 14, GOLD, true, Gravity.START);
-        EditText countInput = new EditText(this);
-        countInput.setSingleLine(true);
-        countInput.setText("1");
-        countInput.setTextColor(Color.WHITE);
-        countInput.setTextSize(16);
-        countInput.setInputType(android.text.InputType.TYPE_CLASS_NUMBER);
-        countInput.setBackgroundTintList(ColorStateList.valueOf(GOLD));
-        countInput.setPadding(dp(12), dp(8), dp(12), dp(8));
-        countInput.setFilters(new android.text.InputFilter[]{new android.text.InputFilter.LengthFilter(3)});
-        addView(countInput, ViewGroup.LayoutParams.MATCH_PARENT, dp(52), 0, 6, 0, 8);
-
-        Button generate = createButton("Gerar códigos", true);
-        addView(generate, ViewGroup.LayoutParams.MATCH_PARENT, dp(54), 0, 8, 0, 4);
-        TextView message = addText("Cada código vale por 30 dias a partir da primeira ativação em um aparelho. A chave não é salva neste app.", 14, 0xFFE0DED8, false, Gravity.CENTER);
-        message.setPadding(dp(8), dp(8), dp(8), dp(6));
-        TextView codes = addText("", 16, GOLD, true, Gravity.CENTER);
-        codes.setTypeface(Typeface.MONOSPACE, Typeface.BOLD);
-        codes.setTextIsSelectable(true);
-        Button copy = createButton("Copiar códigos", false);
-        copy.setEnabled(false);
-        addView(copy, ViewGroup.LayoutParams.MATCH_PARENT, dp(52), 0, 4, 0, 0);
-        copy.setOnClickListener(v -> {
-            CharSequence text = codes.getText();
-            if (text.length() == 0) return;
-            ClipboardManager clipboard = (ClipboardManager) getSystemService(CLIPBOARD_SERVICE);
-            if (clipboard != null) {
-                clipboard.setPrimaryClip(ClipData.newPlainText("Códigos GOLD MÓVEL", text));
-                message.setText("Códigos copiados. Guarde e entregue cada um individualmente.");
-            }
-        });
-        generate.setOnClickListener(v -> generateAdminCodes(adminKey, countInput, message, codes, generate, copy));
-
-        Button webPanel = createButton("Abrir painel web · lembrar neste navegador", false);
-        addView(webPanel, ViewGroup.LayoutParams.MATCH_PARENT, dp(52), 0, 8, 0, 0);
-        webPanel.setOnClickListener(v -> openUrl(API_BASE + "/admin"));
-
-        Button back = createButton("Voltar", false);
-        addView(back, ViewGroup.LayoutParams.MATCH_PARENT, dp(52), 0, 10, 0, 0);
-        back.setOnClickListener(v -> {
-            if (adminReturnToHome) showHome(currentExpiresAt);
-            else showActivationScreen("Ative seu acesso com o código recebido da GOLD MÓVEL.", adminReturnCode);
-        });
-    }
-
-    private void generateAdminCodes(EditText adminKeyInput, EditText countInput, TextView message,
-                                    TextView codesView, Button generateButton, Button copyButton) {
-        if (adminRequestInFlight) return;
-        String adminKey = adminKeyInput.getText().toString().trim();
-        if (adminKey.isEmpty()) {
-            message.setText("Digite a chave administrativa.");
-            return;
-        }
-        int count;
-        try {
-            count = Integer.parseInt(countInput.getText().toString());
-        } catch (NumberFormatException e) {
-            message.setText("Informe uma quantidade entre 1 e 100.");
-            return;
-        }
-        if (count < 1 || count > 100) {
-            message.setText("Informe uma quantidade entre 1 e 100.");
-            return;
-        }
-
-        adminRequestInFlight = true;
-        generateButton.setEnabled(false);
-        copyButton.setEnabled(false);
-        codesView.setText("");
-        message.setText("Conectando ao serviço seguro e gerando códigos…");
-        int requestedCount = count;
-        executor.execute(() -> {
-            String generatedCodes = null;
-            String errorMessage = null;
-            HttpURLConnection connection = null;
-            try {
-                connection = (HttpURLConnection) new URL(API_BASE + "/admin/generate").openConnection();
-                connection.setRequestMethod("POST");
-                connection.setConnectTimeout(12_000);
-                connection.setReadTimeout(12_000);
-                connection.setDoOutput(true);
-                connection.setRequestProperty("Authorization", "Bearer " + adminKey);
-                connection.setRequestProperty("Content-Type", "application/json; charset=utf-8");
-                connection.setRequestProperty("Accept", "application/json");
-                JSONObject payload = new JSONObject();
-                payload.put("count", requestedCount);
-                byte[] body = payload.toString().getBytes(StandardCharsets.UTF_8);
-                connection.setFixedLengthStreamingMode(body.length);
-                try (OutputStream output = connection.getOutputStream()) {
-                    output.write(body);
-                }
-                int status = connection.getResponseCode();
-                InputStream stream = status >= 200 && status < 300 ? connection.getInputStream() : connection.getErrorStream();
-                JSONObject response = new JSONObject(readFully(stream));
-                if (status < 200 || status >= 300) {
-                    throw new IllegalStateException(response.optString("message", "Não foi possível gerar os códigos."));
-                }
-                JSONArray results = response.optJSONArray("codes");
-                if (results == null || results.length() != requestedCount) {
-                    throw new IllegalStateException("A resposta do serviço não contém todos os códigos.");
-                }
-                StringBuilder output = new StringBuilder();
-                for (int i = 0; i < results.length(); i++) {
-                    if (i > 0) output.append('\n');
-                    output.append(results.getString(i));
-                }
-                generatedCodes = output.toString();
-            } catch (Exception e) {
-                errorMessage = e instanceof IllegalStateException && e.getMessage() != null
-                        ? e.getMessage()
-                        : "Não foi possível conectar ao serviço. Confira a internet e tente novamente.";
-            } finally {
-                if (connection != null) connection.disconnect();
-            }
-            String finalCodes = generatedCodes;
-            String finalError = errorMessage;
-            mainHandler.post(() -> {
-                adminRequestInFlight = false;
-                if (isFinishing() || isDestroyed()) return;
-                adminKeyInput.setText("");
-                generateButton.setEnabled(true);
-                if (finalError != null) {
-                    codesView.setText("");
-                    copyButton.setEnabled(false);
-                    message.setText(finalError);
-                } else {
-                    codesView.setText(finalCodes);
-                    copyButton.setEnabled(true);
-                    message.setText("Códigos exibidos uma única vez. Anote-os e entregue individualmente.");
                 }
             });
         });
@@ -514,20 +314,9 @@ public final class MainActivity extends Activity {
     }
 
     private void addWhatsAppButton() {
-        Button whatsapp = createButton("Fale com a GOLD MÓVEL no WhatsApp", true);
+        Button whatsapp = createButton("Falar no WhatsApp", false);
         whatsapp.setOnClickListener(v -> openUrl(WHATSAPP_URL));
         addView(whatsapp, ViewGroup.LayoutParams.MATCH_PARENT, dp(54), 0, 8, 0, 0);
-    }
-
-    private void addAdminGeneratorButton(String codeDraft) {
-        Button admin = createButton("Gerar códigos · administrador", false);
-        admin.setOnClickListener(v -> showAdminGeneratorScreen(codeDraft));
-        addView(admin, ViewGroup.LayoutParams.MATCH_PARENT, dp(52), 0, 8, 0, 0);
-    }
-
-    private void addPrivacyNote() {
-        TextView note = addText("A ativação envia o código e um identificador técnico protegido por HTTPS para verificar a validade e limitar o uso a um aparelho.", 12, 0xFFAAA69B, false, Gravity.CENTER);
-        note.setPadding(dp(10), dp(14), dp(10), dp(6));
     }
 
     private void makeScreen() {
