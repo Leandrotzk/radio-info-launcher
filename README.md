@@ -12,11 +12,13 @@ Aplicativo Android nativo e leve para orientar clientes na escolha de H+, 3G, 4G
 
 ## Acesso por código de 30 dias
 
-Cada código gerado no painel privado pode ser ativado em um aparelho e começa a valer por 30 dias na primeira ativação. O app precisa de internet ao abrir para validar o código. O serviço armazena hashes do código e de um identificador técnico do aparelho, não o número de telefone do cliente.
+Cada código individual ativa um aparelho e começa a valer por 30 dias na primeira ativação. O app precisa de internet ao abrir para validar o código. O serviço armazena hashes dos códigos e do identificador técnico do aparelho, não o número de telefone do cliente.
 
-Painel de geração: https://goldmovel-license-api.taliba.workers.dev/admin
+O botão **Gerar códigos · administrador**, disponível no app, aceita a chave administrativa e gera de 1 a 100 códigos. A chave é enviada ao serviço somente por HTTPS, não é gravada no aplicativo e é limpa do campo após a solicitação. Os códigos são mostrados uma única vez e podem ser copiados.
 
-A chave de administrador não fica no APK nem neste repositório. Guarde-a privadamente. Códigos são exibidos apenas uma vez; compartilhe cada código somente com o cliente correspondente.
+Painel web alternativo: https://goldmovel-license-api.taliba.workers.dev/admin
+
+Guarde a chave administrativa em local privado. Ela nunca deve ser incluída no APK nem no repositório.
 
 ## Build local
 
